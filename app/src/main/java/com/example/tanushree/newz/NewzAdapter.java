@@ -19,7 +19,8 @@ public class NewzAdapter extends RecyclerView.Adapter<NewzAdapter.NewzViewHolder
     private List<NewzItem> mNewzItemList;
     private final NewzListFragment.OnNewzItemSelectedInterface mListener;
 
-    public NewzAdapter(List<NewzItem> newzItemList, NewzListFragment.OnNewzItemSelectedInterface listener)
+    public NewzAdapter(List<NewzItem> newzItemList,
+                       NewzListFragment.OnNewzItemSelectedInterface listener)
     {
         mNewzItemList = newzItemList;
         mListener = listener;

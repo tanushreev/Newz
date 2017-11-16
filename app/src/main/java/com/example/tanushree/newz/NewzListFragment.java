@@ -4,6 +4,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -13,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -65,7 +68,8 @@ public class NewzListFragment extends Fragment
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState)
     {
         View view = inflater.inflate(R.layout.fragment_newz_list, container, false);
 
@@ -82,67 +86,77 @@ public class NewzListFragment extends Fragment
         // The data in the database will be displayed to the user.
         updateRecyclerView();
 
-        String hackernewsUrl = "https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty";
-
-        OkHttpClient client = new OkHttpClient();
-
-        // Builds a request that the client will sent to the server Hacker-News.
-
-        Request request = new Request.Builder()
-                .url(hackernewsUrl)
-                .build();
-
-        // Wraps the request inside a call object.
-
-        Call call = client.newCall(request);
-
-        // The enqueue method executes the call asynchronously.
-        // The call is executed in the background.
-        // Callback is a communication bridge between the background worker thread and the main thread.
-
-        call.enqueue(new Callback()
+        if (isNetworkAvailable())
         {
-            @Override
-            public void onFailure(Call call, IOException e) {
+            String hackernewsUrl =
+                    "https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty";
 
-                Log.i(TAG, "Response failed.");
+            OkHttpClient client = new OkHttpClient();
 
-            }
+            // Builds a request that the client will sent to the server Hacker-News.
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException
-            {
-                try
-                {
-                    if(response.isSuccessful())
-                    {
-                        Log.i(TAG, "Response successful.");
-                        String jsonDataFromServer = response.body().string();
-                        Log.i(TAG, jsonDataFromServer);
-                        parseNews(jsonDataFromServer);
+            Request request = new Request.Builder()
+                    .url(hackernewsUrl)
+                    .build();
 
-                       if (getActivity() == null)
-                            return;
+            // Wraps the request inside a call object.
 
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run()
-                            {
-                                updateRecyclerView();
+            Call call = client.newCall(request);
 
-                                Log.d(TAG, "Done");
-                            }
-                        });
+            /*
+             * The enqueue method executes the call asynchronously.
+             * The call is executed in the background.
+             * Callback is a communication bridge between the background worker thread and the main
+             * thread.
+             */
+
+            call.enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+
+                    // Log.i(TAG, "Response failed.");
+                    alertUserAboutError();
+
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    try {
+                        if (response.isSuccessful())
+                        {
+                            Log.i(TAG, "Response successful.");
+                            String jsonDataFromServer = response.body().string();
+                            Log.i(TAG, jsonDataFromServer);
+                            parseNews(jsonDataFromServer);
+
+                            if (getActivity() == null)
+                                return;
+
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateRecyclerView();
+
+                                    Log.d(TAG, "Done");
+                                }
+                            });
+                        }
+                        else
+                        {
+                            alertUserAboutError();
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "Exception caught: ", e);
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Exception caught: ", e);
                     }
-                } catch (IOException e) {
-                    Log.e(TAG, "Exception caught: ", e);
                 }
-                catch (JSONException e) {
-                    Log.e(TAG, "Exception caught: ", e);
-                }
-            }
-        });
-
+            });
+        }
+        else
+        {
+            Toast.makeText(getActivity(), "Network is Unavailable!", Toast.LENGTH_LONG).show();
+        }
 
         return view;
     }
@@ -153,18 +167,20 @@ public class NewzListFragment extends Fragment
     {
         JSONArray listOfIds = new JSONArray(jsonDataFromServer);
 
-        int numberOfItems = 16;
+        int numberOfItems = 12;
 
-        if(listOfIds.length() < 16)
+        if(listOfIds.length() < 12)
             numberOfItems = listOfIds.length();
 
         ArrayList<NewzItem> newzItemList = new ArrayList<>();
 
         for (int i = 0; i < numberOfItems; i++)
         {
+
             String articleId = listOfIds.getString(i);
             Log.i("ArticleId", articleId);
-            String url = "https://hacker-news.firebaseio.com/v0/item/" + articleId + ".json?print=pretty";
+            String url = "https://hacker-news.firebaseio.com/v0/item/" + articleId +
+                    ".json?print=pretty";
             String articleJson = getArticleJson(url);
             if (articleJson != null)
             {
@@ -285,7 +301,14 @@ public class NewzListFragment extends Fragment
 
         mItems.clear();
 
-        mItems.addAll(mDataSource.read());
+        try {
+            mItems.addAll(mDataSource.read());
+        }
+        catch (NullPointerException e)
+        {
+            e.printStackTrace();
+            return;
+        }
 
         mNewzAdapter.notifyDataSetChanged();
     }
@@ -294,5 +317,26 @@ public class NewzListFragment extends Fragment
     public void onDetach() {
         super.onDetach();
         listener = null;
+    }
+
+    // Check if the device is connected to the internet.
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager manager = (ConnectivityManager)
+                getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = manager.getActiveNetworkInfo();
+        boolean flag = false;
+        if(networkInfo != null && networkInfo.isConnected())
+        {
+            flag = true;
+        }
+        return flag;
+    }
+
+    private void alertUserAboutError()
+    {
+        AlertDialogFragment dialog = new AlertDialogFragment();
+        dialog.show(getActivity().getFragmentManager(), "error_dialog");
+
     }
 }

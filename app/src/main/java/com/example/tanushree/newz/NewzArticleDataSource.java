@@ -43,7 +43,8 @@ public class NewzArticleDataSource
 
         Cursor cursor = sqliteDatabase.query(
                 NewzArticleSQLiteHelper.TABLE_NAME,
-                new String [] {NewzArticleSQLiteHelper.COL_HEADLINE, NewzArticleSQLiteHelper.COL_ARTICLE},
+                new String [] {NewzArticleSQLiteHelper.COL_HEADLINE,
+                               NewzArticleSQLiteHelper.COL_ARTICLE},
                 null, // selection
                 null, // selection args
                 null, // group by
@@ -59,8 +60,15 @@ public class NewzArticleDataSource
         {
             do{
                 NewzItem newzItem = new NewzItem();
-                newzItem.setHeadline(cursor.getString(headlineIndex));
-                newzItem.setArticle(cursor.getString(articleIndex));
+                try {
+                    newzItem.setHeadline(cursor.getString(headlineIndex));
+                    newzItem.setArticle(cursor.getString(articleIndex));
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    return null;
+                }
 
                 Log.i("Database", "read called" + newzItem.getHeadline());
 
@@ -90,9 +98,12 @@ public class NewzArticleDataSource
 
         for (int i=0;i<newzItemList.size();i++)
         {
-            contentValues.put(NewzArticleSQLiteHelper.COL_ARTICLEID, newzItemList.get(i).getArticleId());
-            contentValues.put(NewzArticleSQLiteHelper.COL_HEADLINE, newzItemList.get(i).getHeadline());
-            contentValues.put(NewzArticleSQLiteHelper.COL_ARTICLE,newzItemList.get(i).getArticle());
+            contentValues.put(NewzArticleSQLiteHelper.COL_ARTICLEID,
+                    newzItemList.get(i).getArticleId());
+            contentValues.put(NewzArticleSQLiteHelper.COL_HEADLINE,
+                    newzItemList.get(i).getHeadline());
+            contentValues.put(NewzArticleSQLiteHelper.COL_ARTICLE,
+                    newzItemList.get(i).getArticle());
 
             // call the insert method.
             id = sqliteDatabase.insert(NewzArticleSQLiteHelper.TABLE_NAME, null, contentValues);

@@ -3,6 +3,8 @@ package com.example.tanushree.newz;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.TaskStackBuilder;
+import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,10 +26,15 @@ public class NewzArticleFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+                             Bundle savedInstanceState)
+    {
         // Inflate the layout for this fragment
         String article = getArguments().getString(KEY_ARTICLE);
         View view = inflater.inflate(R.layout.fragment_newz_article, container, false);
+
+        //Toolbar tbFragmentNewzArticle = (Toolbar) view.findViewById(R.id.tbFragmentNewzArticle);
+        //getActivity().setActionBar(tbFragmentNewzArticle);
+
         WebView wvArticle = (WebView) view.findViewById(R.id.wvArticle);
         wvArticle.getSettings().setJavaScriptEnabled(true);
         wvArticle.setWebViewClient(new WebViewClient());
